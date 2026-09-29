@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {ComputerUseLoop} from '../src/computer-use-loop.js';
+const image={ok:true,modelContent:[{type:'image_url',image_url:{url:'data:image/png;base64,fixture'}}]},loop=new ComputerUseLoop();
+assert.throws(()=>loop.before('computer_mouse_click',0),e=>e.code==='COMPUTER_OBSERVATION_REQUIRED');
+await loop.after('take_screenshot',image,0);
+assert.throws(()=>loop.before('computer_mouse_click',0),e=>e.code==='COMPUTER_OBSERVATION_REQUIRED','same batch cannot reason about an unseen screenshot');
+loop.before('computer_mouse_click',1);let captures=0;
+const result=await loop.after('computer_mouse_click',{ok:true},1,{screenshot:async()=>{captures++;return image;}});
+assert.equal(captures,1);assert.equal(result.modelContent[1].type,'image_url');
+assert.throws(()=>loop.before('computer_mouse_click',1),e=>e.code==='COMPUTER_OBSERVATION_REQUIRED');
+loop.before('computer_mouse_click',2);
+const failed=await loop.after('computer_mouse_click',{ok:true},2,{screenshot:async()=>({ok:false})});
+assert.equal(failed.ok,false);assert.match(failed.modelContent,/action_completed/);assert.throws(()=>loop.before('computer_mouse_click',3));
+console.log('PASS Computer Use observe -> model -> action -> screenshot -> verify; same-batch/stale/missing observation refused');

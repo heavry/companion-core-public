@@ -1,0 +1,1042 @@
+{
+  "version": 1,
+  "tools": [
+    {
+      "name": "read_file",
+      "description": "读取授权 workspace 内的小型文本文件；binary 与大型文件只返回 metadata。",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "start_line": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "max_lines": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000
+          }
+        }
+      }
+    },
+    {
+      "name": "list_directory",
+      "description": "列出授权 workspace 内目录，不进行全盘扫描。",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        }
+      }
+    },
+    {
+      "name": "search_files",
+      "description": "在授权 workspace 内按文本或文件名搜索，跳过 binary 与大型文件。",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "content",
+              "name"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          }
+        }
+      }
+    },
+    {
+      "name": "write_file",
+      "description": "在授权 workspace 内新建文本文件；已存在的文件必须使用带前置条件的 fs_patch。",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "content"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 1048576
+          }
+        }
+      }
+    },
+    {
+      "name": "apply_patch",
+      "description": "对授权 workspace 内文本文件执行精确 old_text/new_text patch；默认要求每段旧文本只出现一次。",
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "changes"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "changes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "old_text",
+                "new_text"
+              ],
+              "properties": {
+                "old_text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 262144
+                },
+                "new_text": {
+                  "type": "string",
+                  "maxLength": 262144
+                },
+                "expected_occurrences": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "read_image",
+      "description": "读取用户提供的本机图片或授权项目图片，返回真实 vision input，不把图片写入长期聊天。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "read_pdf",
+      "description": "按页读取本机 PDF 的文本。扫描版 PDF 没有文本时明确报告，需要截图/OCR。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "start_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          },
+          "end_page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "run_command",
+      "description": "在授权项目的 macOS 沙箱执行命令。默认禁止联网、凭据、系统修改、删除。确需这些操作时 unrestricted=true，必须逐次确认。返回进程 ID；用 read_command_output 查看测试结果。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16000
+          },
+          "cwd": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 600000
+          },
+          "unrestricted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_process_status",
+      "description": "查看本任务启动的命令状态和退出码。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "process_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "process_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "read_command_output",
+      "description": "读取命令 artifact 的有限范围，cursor 是字节偏移。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "process_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "cursor": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "max_chars": {
+            "type": "integer",
+            "minimum": 256,
+            "maximum": 16000
+          }
+        },
+        "required": [
+          "process_id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "take_screenshot",
+      "description": "读取当前桌面的真实截图与应用信息；仅用于本轮 vision reasoning。",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "computer": [
+    {
+      "name": "computer_screen_observe",
+      "description": "读取当前 macOS 应用和窗口的轻量结构，不截取屏幕。",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "computer_screen_screenshot",
+      "description": "截取当前主显示器，用于当前 Agent turn 的视觉定位；截图不会写入长期记忆。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "computer_window_list",
+      "description": "列出 macOS 顶层窗口。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "on_screen_only": {
+            "type": "boolean"
+          },
+          "pid": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "computer_window_observe",
+      "description": "读取一个窗口的辅助功能结构并可同时截取该窗口。操作元素前应先观察并使用新鲜 element_token。",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "pid",
+          "window_id"
+        ],
+        "properties": {
+          "pid": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "window_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "include_screenshot": {
+            "type": "boolean"
+          },
+          "query": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "max_elements": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2000
+          },
+          "max_depth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25
+          },
+          "session": {
+            "type": "string",
+            "maxLength": 80
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "computer_mouse_click",
+      "description": "点击一个刚观察到的元素；优先使用 element_token，只有自绘界面才使用坐标。",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "pid"
+        ],
+        "properties": {
+          "pid": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "element_token": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "element_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "snapshot_id": {
+            "type": "string",
+            "pattern": "^s[0-9a-f]{8}$"
+          },
+          "window_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "button": {
+            "type": "string",
+            "enum": [
+              "left",
+              "right",
+              "middle"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "press",
+              "show_menu",
+              "pick",
+              "confirm",
+              "cancel",
+              "open"
+            ]
+          },
+          "delivery_mode": {
+            "type": "string",
+            "enum": [
+              "background",
+              "foreground"
+            ]
+          },
+          "session": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "target_description": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "用人类可读文字说明要操作的控件或结果；Companion 用它执行高风险硬边界判断，不传给 Cua Driver。"
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "element_token"
+            ]
+          },
+          {
+            "required": [
+              "element_index",
+              "snapshot_id",
+              "window_id"
+            ]
+          },
+          {
+            "required": [
+              "x",
+              "y"
+            ]
+          }
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "computer_mouse_double_click",
+      "description": "双击刚观察到的元素或自绘界面坐标。",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "pid"
+        ],
+        "properties": {
+          "pid": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "element_token": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "element_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "snapshot_id": {
+            "type": "string",
+            "pattern": "^s[0-9a-f]{8}$"
+          },
+          "window_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "delivery_mode": {
+            "type": "string",
+            "enum": [
+              "background",
+              "foreground"
+            ]
+          },
+          "session": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "target_description": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "用人类可读文字说明要操作的控件或结果；Companion 用它执行高风险硬边界判断，不传给 Cua Driver。"
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "element_token"
+            ]
+          },
+          {
+            "required": [
+              "element_index",
+              "snapshot_id",
+              "window_id"
+            ]
+          },
+          {
+            "required": [
+              "x",
+              "y"
+            ]
+          }
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "computer_mouse_move",
+      "description": "移动 macOS 指针；scope=desktop 时移动真实系统指针。",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "x",
+          "y"
+        ],
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "window",
+              "desktop"
+            ]
+          },
+          "target": {
+            "type": "object"
+          },
+          "cursor_id": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "session": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "target_description": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "用人类可读文字说明要操作的控件或结果；Companion 用它执行高风险硬边界判断，不传给 Cua Driver。"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "computer_mouse_drag",
+      "description": "在刚观察到的窗口或屏幕上拖动。",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "from_x",
+          "from_y",
+          "to_x",
+          "to_y"
+        ],
+        "properties": {
+          "from_x": {
+            "type": "number"
+          },
+          "from_y": {
+            "type": "number"
+          },
+          "to_x": {
+            "type": "number"
+          },
+          "to_y": {
+            "type": "number"
+          },
+          "pid": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "window_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "window",
+              "desktop"
+            ]
+          },
+          "target": {
+            "type": "object"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "steps": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "button": {
+            "type": "string",
+            "enum": [
+              "left",
+              "right",
+              "middle"
+            ]
+          },
+          "delivery_mode": {
+            "type": "string",
+            "enum": [
+              "background",
+              "foreground"
+            ]
+          },
+          "session": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "target_description": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "用人类可读文字说明要操作的控件或结果；Companion 用它执行高风险硬边界判断，不传给 Cua Driver。"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "computer_keyboard_type",
+      "description": "向刚观察到并由用户授权的目标输入普通文字。密码、密钥和不可逆提交仍受硬规则限制。",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 8000
+          },
+          "pid": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "element_token": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "element_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "snapshot_id": {
+            "type": "string",
+            "pattern": "^s[0-9a-f]{8}$"
+          },
+          "window_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "window",
+              "desktop"
+            ]
+          },
+          "delivery_mode": {
+            "type": "string",
+            "enum": [
+              "background",
+              "foreground"
+            ]
+          },
+          "delay_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 200
+          },
+          "session": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "target_description": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "用人类可读文字说明要操作的控件或结果；Companion 用它执行高风险硬边界判断，不传给 Cua Driver。"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "computer_keyboard_key",
+      "description": "按一个键，可指定刚观察到的元素。",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "pid": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "window_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "element_token": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "element_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "snapshot_id": {
+            "type": "string",
+            "pattern": "^s[0-9a-f]{8}$"
+          },
+          "modifiers": {
+            "type": "array",
+            "maxItems": 6,
+            "items": {
+              "type": "string",
+              "maxLength": 20
+            }
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "window",
+              "desktop"
+            ]
+          },
+          "delivery_mode": {
+            "type": "string",
+            "enum": [
+              "background",
+              "foreground"
+            ]
+          },
+          "session": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "target_description": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "用人类可读文字说明要操作的控件或结果；Companion 用它执行高风险硬边界判断，不传给 Cua Driver。"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "computer_keyboard_hotkey",
+      "description": "执行 macOS 快捷键。",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "keys"
+        ],
+        "properties": {
+          "keys": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 6,
+            "items": {
+              "type": "string",
+              "maxLength": 40
+            }
+          },
+          "pid": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "window_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "element_token": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "window",
+              "desktop"
+            ]
+          },
+          "delivery_mode": {
+            "type": "string",
+            "enum": [
+              "background",
+              "foreground"
+            ]
+          },
+          "session": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "target_description": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "用人类可读文字说明要操作的控件或结果；Companion 用它执行高风险硬边界判断，不传给 Cua Driver。"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "computer_scroll",
+      "description": "在当前界面按方向滚动，可定位到刚观察到的元素或像素区域。",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "direction"
+        ],
+        "properties": {
+          "direction": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down",
+              "left",
+              "right"
+            ]
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "by": {
+            "type": "string",
+            "enum": [
+              "line",
+              "page"
+            ]
+          },
+          "pid": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "window_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "element_token": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "window",
+              "desktop"
+            ]
+          },
+          "delivery_mode": {
+            "type": "string",
+            "enum": [
+              "background",
+              "foreground"
+            ]
+          },
+          "session": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "target_description": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "用人类可读文字说明要操作的控件或结果；Companion 用它执行高风险硬边界判断，不传给 Cua Driver。"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "computer_window_focus",
+      "description": "将指定 macOS 应用或窗口切到前台。",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "pid"
+        ],
+        "properties": {
+          "pid": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "window_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "target_description": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "用人类可读文字说明要操作的控件或结果；Companion 用它执行高风险硬边界判断，不传给 Cua Driver。"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "computer_app_launch",
+      "description": "按 bundle id 或名称打开一个 macOS 应用。",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "bundle_id": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "urls": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          "creates_new_application_instance": {
+            "type": "boolean"
+          },
+          "target_description": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "用人类可读文字说明要操作的控件或结果；Companion 用它执行高风险硬边界判断，不传给 Cua Driver。"
+          }
+        },
+        "oneOf": [
+          {
+            "required": [
+              "bundle_id"
+            ]
+          },
+          {
+            "required": [
+              "name"
+            ]
+          }
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "computer_app_activate",
+      "description": "激活一个已运行的 macOS 应用，并可聚焦指定窗口。",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "pid"
+        ],
+        "properties": {
+          "pid": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "window_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "target_description": {
+            "type": "string",
+            "maxLength": 240,
+            "description": "用人类可读文字说明要操作的控件或结果；Companion 用它执行高风险硬边界判断，不传给 Cua Driver。"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  ]
+}

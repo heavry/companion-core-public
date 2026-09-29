@@ -1,0 +1,35 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+process.env.COMPANION_BLOCK_REAL_UPSTREAM="1";
+process.env.UPSTREAM_BASE_URL="http://127.0.0.1:9/v1";
+process.env.UPSTREAM_CHAT_BASE_URL="http://127.0.0.1:9/v1";
+process.env.UPSTREAM_AGENT_BASE_URL="http://127.0.0.1:9/v1";
+process.env.UPSTREAM_SUMMARY_BASE_URL="http://127.0.0.1:9/v1";
+process.env.DATABASE_PATH=path.join(os.tmpdir(),`companion-attention-${Date.now()}.sqlite`);
+const {AttentionStore}=await import("../src/attention-store.js");
+const {captureExplicitScreenContext}=await import("../src/presence-screen.js");
+
+const file=path.join(os.tmpdir(),`attention-${Date.now()}.json`);
+const store=new AttentionStore({file,now:()=>new Date("2026-08-30T12:00:00+08:00")});
+const first=store.record({type:"agent_completed",source:"agent",resource:"chat:default",fingerprint:"t1",title:"任务完成了。",summary:"测试跑完了",conversation_id:"chat:default",stderr:"SECRET",screenshot:"AAAA"},{quietHours:false,settings:{proactiveEnabled:true}});
+assert.equal(first.delivered,true);
+assert.equal(first.item.summary.includes("SECRET"),false);
+assert.equal("stderr" in first.item,false);
+const dup=store.record({type:"agent_completed",source:"agent",resource:"chat:default",fingerprint:"t1",title:"任务完成了。",state:"done"},{quietHours:false});
+assert.equal(dup.delivered,false);
+store.record({type:"reminder_due",source:"scheduler",resource:"plan-1",fingerprint:"water",title:"该喝水了",summary:"半小时前提醒"},{quietHours:false});
+assert.equal(store.snapshot().unread>=1,true);
+const id=store.snapshot().items[0].id;
+assert.equal(store.mark(id,"read").status,"read");
+
+await assert.rejects(captureExplicitScreenContext({explicit:false}),error=>error.code==="SCREEN_CONTEXT_NOT_EXPLICIT");
+const screen=await captureExplicitScreenContext({explicit:true,observe:async()=>({frontmost:"TextEdit",windows:[{app:"TextEdit",title:"未命名"}]})});
+assert.equal(screen.ephemeral,true);
+assert.equal(screen.persist,false);
+assert.equal(screen.memory,false);
+assert.equal(screen.screenshot,false);
+assert.equal(screen.frontmost,"TextEdit");
+fs.unlinkSync(file);
+console.log("attention store tests passed");

@@ -1,0 +1,31 @@
+{
+  "id": "echo-note",
+  "name": "Echo Note",
+  "version": "1.0.0",
+  "type": "tool",
+  "engine": "javascript",
+  "description": "最小示例模块：注册一个模块工具，演示 Permission Bridge 与 Trigger 用法。复制到 modules/echo-note/ 后在 Admin 里重新扫描即可加载。",
+  "permissions": ["tool.register", "memory.read", "events.read"],
+  "tools": [
+    {
+      "name": "mod_echo_note",
+      "description": "把输入文本包装成一条笔记回显（示例用）。",
+      "parameters": {
+        "type": "object",
+        "properties": { "text": { "type": "string" } },
+        "required": ["text"],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "hooks": [],
+  "triggers": [
+    { "id": "manual_ping", "type": "manual" },
+    {
+      "id": "interval_ping",
+      "type": "interval",
+      "everySeconds": 3600,
+      "config": {}
+    }
+  ]
+}

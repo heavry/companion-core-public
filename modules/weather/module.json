@@ -1,0 +1,25 @@
+{
+  "id": "weather",
+  "name": "Weather Awareness",
+  "version": "1.0.0",
+  "type": "integration",
+  "engine": "javascript",
+  "description": "天气感知模块：当前天气 / 小时 / 多日预报，可产生 rain_soon、temperature_drop 等结构化事件。位置由用户显式配置（data/modules-config/weather.json），不自动获取精确位置。",
+  "permissions": ["network.fetch"],
+  "network_allowlist": ["api.open-meteo.com"],
+  "tools": [
+    { "name": "get_current_weather", "description": "获取当前位置当前天气（温度/风速/降水）。", "parameters": { "type": "object", "properties": {} } },
+    { "name": "get_hourly_forecast", "description": "未来 12 小时逐小时预报摘要。", "parameters": { "type": "object", "properties": {} } },
+    { "name": "get_daily_forecast", "description": "未来 3 天每日预报摘要。", "parameters": { "type": "object", "properties": {} } }
+  ],
+  "hooks": [],
+  "triggers": [
+    { "id": "check_alerts", "type": "manual" },
+    {
+      "id": "weather_watchdog",
+      "type": "interval",
+      "everySeconds": 1800,
+      "config": {}
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+import { conservativeDuplicate,filterSharedMemoryCandidate } from "../src/memory-policy.js";
+import { resolveSession,stableProjectSession } from "../src/session.js";
+import { parseToolDecision,validateToolArguments } from "../src/tool-compat.js";
+
+const assert=(v,m)=>{if(!v)throw new Error(`ASSERT policy: ${m}`);};
+assert(conservativeDuplicate("用户喜欢机械键盘","用户很喜欢机械键盘"),"safe near duplicate merge");
+assert(!conservativeDuplicate("用户喜欢机械键盘","用户不喜欢机械键盘"),"opposite memories stay separate");
+assert(filterSharedMemoryCandidate({content:"CompanionAI 的 OAuth 登录问题已修复并通过测试。",type:"project",source:"opencode",agent:true}).ok,"durable agent result allowed");
+assert(!filterSharedMemoryCandidate({content:"我感觉你今天有点累。",type:"fact",source:"diary"}).ok,"diary speculation is not user fact");
+for(const content of ["auth.ts 第 317 行出现错误","SECRET_TOOL_OUTPUT_XYZ","git diff\n@@ -1 +1 @@","TypeError: failed\n at auth.ts:317:2","```js\nconst key = 1\n```"])assert(!filterSharedMemoryCandidate({content,type:"project",source:"opencode",agent:true}).ok,`engineering artifact rejected: ${content.slice(0,12)}`);
+assert(stableProjectSession("/Users/example-1/A/CompanionAI")===stableProjectSession("/Users/example-1/A/CompanionAI/"),"stable normalized path");
+assert(stableProjectSession("/Users/example-a/CompanionAI")!==stableProjectSession("/Users/example-b/CompanionAI"),"same basename does not collide");
+const request=headers=>({headers});
+assert(resolveSession(request({"x-companion-session":"manual"}),{cwd:"/tmp/project"},"opencode").sessionKey==="manual","explicit header wins");
+assert(resolveSession(request({"x-companion-session":"manual","x-companion-workspace":"/tmp/project"}),{},"kelivo").workspaceRoot==="/tmp/project","an explicit workspace scope is preserved without changing the daily session key");
+assert(resolveSession(request({}),{},"kelivo").sessionKey==="daily-main","Kelivo stable default");
+assert(resolveSession(request({"x-cwd":"/Users/example-1/CompanionAI"}),{},"opencode").sessionKey===stableProjectSession("/Users/example-1/CompanionAI"),"project header detected");
+assert(resolveSession(request({}),{},"opencode").strategy==="safe_ephemeral","unidentified agent uses isolated safe session");
+const refSchema={type:"object",properties:{payload:{$ref:"#/$defs/payload"}},required:["payload"],additionalProperties:false,$defs:{payload:{type:"object",properties:{value:{type:"string",enum:["ok"]}},required:["value"],additionalProperties:false}}};
+assert(validateToolArguments({payload:{value:"ok"}},refSchema).length===0,"local JSON Schema ref accepted");
+assert(validateToolArguments({payload:{value:1,extra:true}},refSchema).length>=2,"ref type and additional properties rejected");
+const decisionTool={name:"echo",description:"",parameters:{type:"object",properties:{value:{type:"string"}},required:["value"],additionalProperties:false}};
+assert(parseToolDecision('{"type":"tool_call","name":"echo","arguments":{"value":"ok"}}',[decisionTool],"required").ok,"valid compat decision accepted");
+assert(!parseToolDecision('{"type":"tool_call","name":"unknown","arguments":{}}',[decisionTool],"required").ok,"unknown compat tool rejected");
+assert(!parseToolDecision('I will call it: {"type":"tool_call","name":"echo","arguments":{"value":"ok"}}',[decisionTool],"required").ok,"prose-wrapped decision rejected");
+console.log("PASS Memory policy and automatic Session rules");

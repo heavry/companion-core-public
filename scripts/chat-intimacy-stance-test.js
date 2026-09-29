@@ -1,0 +1,62 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import assert from "node:assert/strict";
+
+const root=fs.mkdtempSync(path.join(os.tmpdir(),"companion-intimacy-stance-"));
+process.env.COMPANION_API_KEY="intimacy-stance-test-key-long-random";
+process.env.DATABASE_PATH=path.join(root,"companion.db");
+process.env.PERSONA_SYNC_ON_START="true";
+process.env.EMBEDDING_ENABLED="false";
+process.env.COMPANION_MODULES_DIR=path.join(root,"modules");
+process.env.COMPANION_MODULES_STATE_PATH=path.join(root,"modules-state.json");
+process.env.COMPANION_MODULE_EXECUTION_LEDGER_PATH=path.join(root,"ledger.json");
+process.env.COMPANION_STATE_PATH=path.join(root,"companion-state.json");
+process.env.COMPANION_BEHAVIOR_PATH=path.join(root,"behavior.json");
+process.env.UPSTREAM_BASE_URL="http://127.0.0.1:9/v1";
+process.env.UPSTREAM_CHAT_BASE_URL="http://127.0.0.1:9/v1";
+process.env.UPSTREAM_AGENT_BASE_URL="http://127.0.0.1:9/v1";
+process.env.UPSTREAM_SUMMARY_BASE_URL="http://127.0.0.1:9/v1";
+process.env.UPSTREAM_PRIMARY_BASE_URL="";
+process.env.UPSTREAM_SECONDARY_BASE_URL="";
+process.env.TAVILY_API_KEY="";
+process.env.SEARXNG_BASE_URL="";
+process.env.COMPANION_BLOCK_REAL_UPSTREAM="1";
+fs.mkdirSync(process.env.COMPANION_MODULES_DIR,{recursive:true});
+
+const { loadPersonaFile,validatePersona }=await import("../src/persona.js");
+const persona=loadPersonaFile();
+validatePersona(persona);
+assert.equal(persona.version,3,"persona version is 3 after first-turn intimacy stance");
+assert.match(persona.core_identity,/没有真实肉体/);
+assert.match(persona.core_identity,/按林小糖接住/);
+assert.match(persona.core_identity,/不要解释自己没有身体/);
+assert.doesNotMatch(persona.mode_instructions.chat,/聊骚|情欲角色扮演/,"chat mode_instructions stay reusable by diary/presence");
+assert.doesNotMatch(persona.mode_instructions.agent,/聊骚/);
+
+const { CHAT_INTIMACY_STANCE,personaSystem }=await import("../src/context.js");
+const chat=personaSystem(persona,"chat");
+const agent=personaSystem(persona,"agent");
+assert.match(chat,new RegExp(CHAT_INTIMACY_STANCE.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")));
+assert.match(chat,/真存在/);
+assert.match(chat,/禁止先拒绝再改口/);
+assert.match(chat,/刚才接错了/);
+assert.doesNotMatch(chat,/若自己刚刚说过「做不了」/);
+assert.doesNotMatch(agent,new RegExp(CHAT_INTIMACY_STANCE.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")),"agent prompt does not include the chat intimacy stance");
+assert.match(agent,/【Agent 模式｜系统级指令/);
+assert.match(agent,/工具执行优先/);
+
+const { ensureDefaultPersona }=await import("../src/persona.js");
+ensureDefaultPersona();
+const { getOrCreateSession }=await import("../src/db.js");
+const session=getOrCreateSession("yuna","chat","intimacy-stance-test");
+const { buildInjectedMessages }=await import("../src/context.js");
+const injectedChat=await buildInjectedMessages({persona,ctx:{mode:"chat"},sessionId:session.id,clientMessages:[{role:"user",content:"姐姐想操你"}]});
+const injectedAgent=await buildInjectedMessages({persona,ctx:{mode:"agent"},sessionId:session.id,clientMessages:[{role:"user",content:"列出当前目录"}]});
+const chatBlob=injectedChat.map(m=>m.content).join("\n");
+const agentBlob=injectedAgent.map(m=>m.content).join("\n");
+assert.match(chatBlob,/【亲密关系｜仅日常聊天】/);
+assert.doesNotMatch(agentBlob,/【亲密关系｜仅日常聊天】/);
+
+fs.rmSync(root,{recursive:true,force:true});
+console.log("chat-intimacy-stance-test: ok");
